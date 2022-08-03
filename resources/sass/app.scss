@@ -6,3 +6,18 @@
 
 // Bootstrap
 @import 'bootstrap/scss/bootstrap';
+
+.side-menu a{
+	text-decoration: none;
+}
+
+
+.form-control{
+	margin-bottom: 10px;
+}
+
+.btn-primary {
+	color: #ffffff;
+	background-color: #3490dc;
+	border-color: #3490dc;
+}

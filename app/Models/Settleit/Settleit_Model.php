@@ -15,9 +15,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property  Uuids $defendant
  * @property  string $currency
  * @property  string $settlement_amount
+ * @property  string $step
  */
 class Settleit_Model extends Model {
-	use HasFactory, Uuids;
+	use HasFactory;
+	use Uuids;
+
+	protected $guarded = [];
+
 
 	protected $table = 'settleit';
 }

@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property  boolean $id_verified
  * @property  string $validated_period
  * @property  boolean $is_legal_representative
+ * @property  string $device
  */
 class Settleit_Parties_Model extends Model {
 	use HasFactory, Uuids;

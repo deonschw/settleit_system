@@ -16,10 +16,13 @@ return new class extends Migration {
 			$table->string('status');
 			$table->string('case_number')->nullable();
 			$table->longText('dispute_details')->nullable();
+			$table->uuid('creator_id')->nullable();
+			$table->string('creator_role')->nullable();
 			$table->uuid('plaintiff')->nullable();
 			$table->uuid('defendant')->nullable();
 			$table->string('currency')->default("USD");
 			$table->string('settlement_amount')->nullable();
+			$table->string('step')->default('1_1');
 			$table->timestamps();
 		});
 
@@ -35,6 +38,7 @@ return new class extends Migration {
 			$table->boolean('id_verified')->default(false);
 			$table->string('validated_period')->default('no_limit');
 			$table->boolean('is_legal_representative')->default(false);
+			$table->string('device')->nullable();
 			$table->timestamps();
 		});
 
@@ -85,6 +89,13 @@ return new class extends Migration {
 			$table->json('data')->nullable();
 			$table->timestamps();
 		});
+
+		//		Schema::create('session_log', function (Blueprint $table) {
+		//			$table->uuid('id')->primary();
+		//			$table->string('key')->nullable();
+		//			$table->longText('data')->nullable();
+		//			$table->timestamps();
+		//		});
 	}
 
 	/**

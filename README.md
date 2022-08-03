@@ -23,6 +23,24 @@
   - Share
 
 
+## Controllers:
+
+### Settleit/Settleit_Controller:
+- Check_If_Session_Exists_Function
+  - Return Settleit Session and step
+    - Create_Settleit_Function
+      - Create new UUID
+      - Return UUID
+- Settleit_Step_Store_Function
+  - Take Key and data and saves it
+- Settleit_Finalize_Function
+  - Finalizes and send
+- Settleit_Send_Function
+  - takes UUID Sends the Settleit
+- Get_Settleit_Function
+  - Takes the UUID and shows details
+- Settleit_Counter_Offer
+  - Get offer
 
 ## Database Design:
 
@@ -31,9 +49,12 @@
 - status
 - case_number
 - dispute_details
-- plaintfill - parties_uuid
+- creator_id
+- creator_role
+- plaintiff - parties_uuid
 - defendant - parties_uuid
 - settlement_amount
+- step
 
 ### settleit_Parties:
 - uuid
@@ -50,6 +71,7 @@
 ### settleit_parties_offer_data
 - uuid
 - settleit_parties_id
+- currency
 - amount
 
 ### settleit_action_log
@@ -67,6 +89,7 @@
 ### ID_Verified:
 - uuid
 - parties_id - fk
+- id_verified_id
 - confirmation
 - data - json
 
