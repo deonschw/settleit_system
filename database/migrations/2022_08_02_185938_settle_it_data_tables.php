@@ -23,6 +23,12 @@ return new class extends Migration {
 			$table->string('currency')->default("USD");
 			$table->string('settlement_amount')->nullable();
 			$table->string('step')->default('1_1');
+			$table->string('short_id')->index();
+			$table->index([
+				'creator_id',
+				'plaintiff',
+				'defendant'
+			]);
 			$table->timestamps();
 		});
 
@@ -30,6 +36,8 @@ return new class extends Migration {
 			$table->uuid('id')->primary();
 			$table->uuid('settleit_id');
 			$table->foreign('settleit_id')->references('id')->on('settleit');
+			$table->uuid('user_id')->nullable();
+			$table->foreign('user_id')->references('id')->on('users');
 			$table->string('role')->nullable();
 			$table->string('full_name')->nullable();
 			$table->string('address')->nullable();
@@ -39,6 +47,10 @@ return new class extends Migration {
 			$table->string('validated_period')->default('no_limit');
 			$table->boolean('is_legal_representative')->default(false);
 			$table->string('device')->nullable();
+			$table->index([
+				'settleit_id',
+				'user_id'
+			]);
 			$table->timestamps();
 		});
 
@@ -47,7 +59,9 @@ return new class extends Migration {
 			$table->uuid('settleit_parties_id');
 			$table->foreign('settleit_parties_id')->references('id')->on('settleit_parties');
 			$table->string('currency')->default("USD");
-			$table->string('amount')->nullable();
+			$table->string('total_amount')->nullable();
+			$table->string('settleit_amount')->nullable();
+			$table->index(['settleit_parties_id']);
 			$table->timestamps();
 		});
 
@@ -70,6 +84,8 @@ return new class extends Migration {
 
 		Schema::create('legal_data', function (Blueprint $table) {
 			$table->uuid('id')->primary();
+			$table->uuid('settleit_id');
+			$table->foreign('settleit_id')->references('id')->on('settleit');
 			$table->uuid('settleit_parties_id');
 			$table->foreign('settleit_parties_id')->references('id')->on('settleit_parties');
 			$table->string('full_name')->nullable();
@@ -84,9 +100,15 @@ return new class extends Migration {
 			$table->uuid('id')->primary();
 			$table->uuid('settleit_parties_id');
 			$table->foreign('settleit_parties_id')->references('id')->on('settleit_parties');
+			$table->uuid('user_id')->nullable();
+			$table->foreign('user_id')->references('id')->on('users');
 			$table->string('id_verified_id')->nullable();
 			$table->boolean('id_confirmed')->default(false);
 			$table->json('data')->nullable();
+			$table->index([
+				'settleit_parties_id',
+				'user_id'
+			]);
 			$table->timestamps();
 		});
 

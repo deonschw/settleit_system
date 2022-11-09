@@ -40,4 +40,49 @@ Route::prefix('v1')->group(function () {
 		Settleit_Controller::class,
 		'Settleit_Step_1_6_Store_Function'
 	]);
+
+	Route::post('step_1_7', [
+		Settleit_Controller::class,
+		'Settleit_Step_1_7_Store_Function'
+	]);
+
+	Route::post('step_1_8', [
+		Settleit_Controller::class,
+		'Settleit_Step_1_8_Store_Function'
+	]);
+
+	Route::post('step_2_1', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_1_Store_Function'
+	]);
+
+	Route::post('step_2_2', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_2_Store_Function'
+	]);
+
+	Route::post('step_2_3', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_3_Store_Function'
+	]);
+
+	Route::post('step_2_4', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_4_Store_Function'
+	]);
+
+	Route::post('step_2_5', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_5_Store_Function'
+	]);
+
+	Route::post('step_2_6', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_6_Store_Function'
+	]);
+
+	Route::post('check_if_user_registered', [
+		Settleit_Controller::class,
+		'Check_If_User_Registered'
+	]);
 });

@@ -16,4 +16,8 @@ class Settleit_Action_Log_Model extends Model {
 	use HasFactory, Uuids;
 
 	protected $table = 'settleit_action_log';
+
+	public function escapeWhenCastingToString($escape = true) {
+		// TODO: Implement escapeWhenCastingToString() method.
+	}
 }

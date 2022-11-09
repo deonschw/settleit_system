@@ -16,9 +16,10 @@ return new class extends Migration {
 			$table->string('full_name');
 			$table->string('email')->unique();
 			$table->string('mobile_number')->nullable();
+			$table->string('country')->nullable();
+			$table->boolean('id_verified')->default(false);
 			$table->boolean('account_active')->default(true);
 			$table->boolean('is_super_admin')->default(false);
-			$table->string('country')->nullable();
 			$table->timestamp('email_verified_at')->nullable();
 			$table->string('password');
 			$table->rememberToken();

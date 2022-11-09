@@ -11,11 +11,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property  string $status
  * @property  string $case_number
  * @property  string $dispute_details
+ * @property  Uuids $creator_id
+ * @property  string $creator_role
  * @property  Uuids $plaintiff
  * @property  Uuids $defendant
  * @property  string $currency
  * @property  string $settlement_amount
  * @property  string $step
+ * @property  string $short_id
  */
 class Settleit_Model extends Model {
 	use HasFactory;
@@ -25,4 +28,22 @@ class Settleit_Model extends Model {
 
 
 	protected $table = 'settleit';
+
+	public function escapeWhenCastingToString($escape = true) {
+		// TODO: Implement escapeWhenCastingToString() method.
+	}
+
+	public function Settleit_Main_Party() {
+		return $this->hasOne(Settleit_Parties_Model::class, 'id', 'creator_id');
+	}
+
+	public function Settleit_Recipient_Party() {
+		if ($this->creator_role == 'Plaintiff') {
+			return $this->hasOne(Settleit_Parties_Model::class, 'id', 'defendant');
+		} else {
+			return $this->hasOne(Settleit_Parties_Model::class, 'id', 'plaintiff');
+		}
+	}
+
+
 }

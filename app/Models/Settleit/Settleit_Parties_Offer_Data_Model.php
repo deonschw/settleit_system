@@ -10,10 +10,15 @@ use Illuminate\Database\Eloquent\Model;
  * @property  Uuids $id
  * @property  Uuids $settleit_parties_id
  * @property  string $currency
- * @property  string $amount
+ * @property  string $total_amount
+ * @property  string $settleit_amount
  */
 class Settleit_Parties_Offer_Data_Model extends Model {
 	use HasFactory, Uuids;
 
 	protected $table = 'settleit_parties_offer_data';
+
+	public function escapeWhenCastingToString($escape = true) {
+		// TODO: Implement escapeWhenCastingToString() method.
+	}
 }

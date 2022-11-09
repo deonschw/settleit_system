@@ -72,7 +72,8 @@
 - uuid
 - settleit_parties_id
 - currency
-- amount
+- total_amount
+- settleit_amount
 
 ### settleit_action_log
 - uuid
@@ -92,6 +93,16 @@
 - id_verified_id
 - confirmation
 - data - json
+
+### legal_data:
+- uuid
+- settleit_parties_id - fk
+- settleit_id
+- full_name
+- address
+- mobile_number
+- email_address
+- company_name
 
 ## Models:
 

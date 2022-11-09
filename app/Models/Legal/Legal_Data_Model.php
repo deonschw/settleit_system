@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property  Uuids $id
+ * @property  Uuids $settleit_id
  * @property  Uuids $settleit_parties_id
  * @property  string $full_name
  * @property  string $address
