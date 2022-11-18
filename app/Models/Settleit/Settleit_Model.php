@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property  Uuids $id
  * @property  string $status
  * @property  string $case_number
+ * @property  string $dispute_title
  * @property  string $dispute_details
  * @property  Uuids $creator_id
  * @property  string $creator_role
  * @property  Uuids $plaintiff
  * @property  Uuids $defendant
  * @property  string $currency
+ * @property  string $settlement_total_amount
  * @property  string $settlement_amount
  * @property  string $step
  * @property  string $short_id

@@ -15,12 +15,14 @@ return new class extends Migration {
 			$table->uuid('id')->primary();
 			$table->string('status');
 			$table->string('case_number')->nullable();
+			$table->string('dispute_title')->nullable();
 			$table->longText('dispute_details')->nullable();
 			$table->uuid('creator_id')->nullable();
 			$table->string('creator_role')->nullable();
 			$table->uuid('plaintiff')->nullable();
 			$table->uuid('defendant')->nullable();
 			$table->string('currency')->default("USD");
+			$table->string('settlement_total_amount')->nullable();
 			$table->string('settlement_amount')->nullable();
 			$table->string('step')->default('1_1');
 			$table->string('short_id')->index();

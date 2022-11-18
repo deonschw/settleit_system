@@ -85,4 +85,9 @@ Route::prefix('v1')->group(function () {
 		Settleit_Controller::class,
 		'Check_If_User_Registered'
 	]);
+
+	Route::post('app_dashboard_data', [
+		Settleit_Controller::class,
+		'Settleit_Dashboard_Data'
+	]);
 });

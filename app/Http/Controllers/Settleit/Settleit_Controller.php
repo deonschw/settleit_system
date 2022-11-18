@@ -17,7 +17,6 @@ use function PHPUnit\Framework\isNull;
 
 class Settleit_Controller extends Controller {
 	public function Check_If_Session_Exists_Function(Request $request) {
-
 		try {
 			if (!isset($request->Session_ID) || !isNull($request->Session_ID)) {
 				$Settleit = new Settleit_Model();
@@ -70,23 +69,31 @@ class Settleit_Controller extends Controller {
 	public function Settleit_Step_1_2_Store_Function(Request $request) {
 		try {
 			$request->validate([
-				'Session_ID'          => [
+				'Session_ID'            => [
 					'required',
 					'exists:settleit,id'
 				],
-				'Last_Step_Completed' => [
+				'Last_Step_Completed'   => [
 					'required',
 					"string"
 				],
-				'Role'                => [
+				'Role'                  => [
 					'required',
 					"string"
 				],
-				'Case_Number'         => [
+				'Case_Number'           => [
 					'nullable',
 					"string"
 				],
-				'Dispute_Details'     => [
+				'Dispute_Title'         => [
+					'nullable',
+					"string"
+				],
+				'Dispute_Details'       => [
+					'nullable',
+					"string"
+				],
+				'Settleit_Total_Amount' => [
 					'nullable',
 					"string"
 				],
@@ -98,7 +105,8 @@ class Settleit_Controller extends Controller {
 			if ($request->Case_Number) {
 				$Settleit->case_number = $request->Case_Number;
 			}
-			if ($request->Dispute_Details) {
+			if ($request->Dispute_Title) {
+				$Settleit->dispute_title = $request->Dispute_Title;
 				$Settleit->dispute_details = $request->Dispute_Details;
 			}
 
@@ -119,7 +127,20 @@ class Settleit_Controller extends Controller {
 
 			$Settleit->creator_id = $Settleit_Parties->id;
 			$Settleit->creator_role = $request->Role;
+			if ($request->Settleit_Total_Amount) {
+				$Settleit->settlement_total_amount = $request->Settleit_Total_Amount;
+			}
 			$Settleit->save();
+
+			if ($request->Settleit_Total_Amount) {
+				$Settleit_Parties_Offer_Data_Model = new Settleit_Parties_Offer_Data_Model();
+				$Settleit_Parties_Offer_Data_Model->settleit_parties_id = $Settleit_Parties->id;
+				$Settleit_Parties_Offer_Data_Model->currency = "USD";
+				$Settleit_Parties_Offer_Data_Model->total_amount = $request->Settleit_Total_Amount;
+				//				$Settleit_Parties_Offer_Data_Model->settleit_amount = $request->Settleit_Amount;
+				$Settleit_Parties_Offer_Data_Model->save();
+			}
+
 
 			$Return_Array = array(
 				'Session_ID'          => $Settleit->id,
@@ -168,10 +189,15 @@ class Settleit_Controller extends Controller {
 					'required',
 					'email'
 				],
+				'Legal_Representation'  => [
+					'required',
+					'Bool'
+				],
 				'Device'              => [
 					'required',
 					'string'
 				],
+
 			]);
 
 			if ($request->get('User_ID') == null || $request->get('User_ID') == 'null' || !$request->has('User_ID')) {
@@ -201,7 +227,8 @@ class Settleit_Controller extends Controller {
 			$Settleit_Parties->address = $request->Address;
 			$Settleit_Parties->mobile_number = $request->Mobile_Number;
 			$Settleit_Parties->email_address = $request->Email_Address;
-			$Settleit_Parties->Device = $request->Device;
+			$Settleit_Parties->is_legal_representative = (bool)$request->Legal_Representation;
+			$Settleit_Parties->device = $request->Device;
 			$Settleit_Parties->save();
 
 			$Settleit->save();
@@ -835,7 +862,6 @@ class Settleit_Controller extends Controller {
 	}
 
 
-	//TODO:: FINISH HERE.
 	private function Settleit_Match_Function($Session_ID) {
 		try {
 			$Settleit = Settleit_Model::findorfail($Session_ID);
@@ -928,4 +954,33 @@ class Settleit_Controller extends Controller {
 			return Response_Error_Helper($exception->getMessage(), 501);
 		}
 	}
+
+	//TODO:: Complete this.
+	public function Settleit_Dashboard_Data(Request $request) {
+		try {
+			$request->validate([
+				'Session_ID'    => [
+					'required',
+					'exists:settleit,id'
+				],
+				'Email_Address' => [
+					'required',
+					'email'
+				],
+			]);
+
+			$User = User::where('email', $request->Email_Address)->get()->first();
+			$Return_Array = array(
+				'Session_ID'      => $request->Session_ID,
+				'User_Registered' => true,
+				'User_ID'         => $User->id,
+			);
+
+			return Response_Successful_Helper('User Registered Check', 'Data', $Return_Array, 200);
+
+		} catch (Exception $exception) {
+			return Response_Error_Helper($exception->getMessage(), 501);
+		}
+	}
+
 }
