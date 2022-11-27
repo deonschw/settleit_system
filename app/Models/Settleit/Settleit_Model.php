@@ -39,6 +39,7 @@ class Settleit_Model extends Model {
 		return $this->hasOne(Settleit_Parties_Model::class, 'id', 'creator_id');
 	}
 
+
 	public function Settleit_Recipient_Party() {
 		if ($this->creator_role == 'Plaintiff') {
 			return $this->hasOne(Settleit_Parties_Model::class, 'id', 'defendant');

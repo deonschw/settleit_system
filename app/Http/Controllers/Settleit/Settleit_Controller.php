@@ -42,10 +42,14 @@ class Settleit_Controller extends Controller {
 
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
 
+
 			if ($Settleit->status != 'Complete') {
 				$Return_Array = array(
-					'Session_ID' => $Settleit->id,
-					'Step'       => $Settleit->step,
+					'Session_ID'      => $Settleit->id,
+					'Step'            => $Settleit->step,
+					'Settleit_Data'   => $Settleit,
+					'Main_Party'      => $Settleit->Settleit_Main_Party,
+					'Recipient_Party' => $Settleit->Settleit_Recipient_Party,
 				);
 
 			} else {
@@ -158,42 +162,42 @@ class Settleit_Controller extends Controller {
 	public function Settleit_Step_1_3_Store_Function(Request $request) {
 		try {
 			$request->validate([
-				'Session_ID'          => [
+				'Session_ID'           => [
 					'required',
 					'exists:settleit,id'
 				],
-				'Settleit_Parties_ID' => [
+				'Settleit_Parties_ID'  => [
 					'required',
 					'exists:settleit_parties,id'
 				],
-				'Last_Step_Completed' => [
+				'Last_Step_Completed'  => [
 					'required',
 					"string"
 				],
-				'Full_Name'           => [
+				'Full_Name'            => [
 					'required',
 					"string"
 				],
-				'User_ID'             => [
+				'User_ID'              => [
 					'nullable',
 					"string"
 				],
-				'Password'            => [
+				'Password'             => [
 					'required',
 					"string"
 				],
-				'Mobile_Number'       => [
+				'Mobile_Number'        => [
 					'required',
 				],
-				'Email_Address'       => [
+				'Email_Address'        => [
 					'required',
 					'email'
 				],
-				'Legal_Representation'  => [
+				'Legal_Representation' => [
 					'required',
-					'Bool'
+					'string'
 				],
-				'Device'              => [
+				'Device'               => [
 					'required',
 					'string'
 				],
@@ -446,7 +450,7 @@ class Settleit_Controller extends Controller {
 					"string"
 				],
 				'Recipient_Address'       => [
-					'required',
+					'nullable',
 					"string"
 				],
 				'Recipient_Mobile_Number' => [
@@ -514,12 +518,12 @@ class Settleit_Controller extends Controller {
 				],
 				'Confirm_And_Send'    => [
 					'required',
-					"bool"
+					"string"
 				],
 			]);
 
 
-			if ($request->Confirm_And_Send === true) {
+			if ((bool)$request->Confirm_And_Send === true) {
 				$Settleit = Settleit_Model::findorfail($request->Session_ID);
 				$Settleit->step = '1_7';
 				$Settleit->status = 'Role 1 Completed - Sending to other party';
