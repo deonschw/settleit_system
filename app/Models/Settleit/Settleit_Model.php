@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property  string $settlement_amount
  * @property  string $step
  * @property  string $short_id
+ * @property  boolean $settleit_show_settlement_amount
  */
 class Settleit_Model extends Model {
 	use HasFactory;

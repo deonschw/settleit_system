@@ -26,6 +26,7 @@ return new class extends Migration {
 			$table->string('settlement_amount')->nullable();
 			$table->string('step')->default('1_1');
 			$table->string('short_id')->index();
+			$table->boolean('settleit_show_settlement_amount')->default(false);
 			$table->index([
 				'creator_id',
 				'plaintiff',
@@ -63,6 +64,7 @@ return new class extends Migration {
 			$table->string('currency')->default("USD");
 			$table->string('total_amount')->nullable();
 			$table->string('settleit_amount')->nullable();
+			$table->boolean('settleit_show_settlement_amount')->default(false);
 			$table->index(['settleit_parties_id']);
 			$table->timestamps();
 		});

@@ -337,17 +337,28 @@ class Settleit_Controller extends Controller {
 					'required',
 					"string"
 				],
+				'Settleit_Show_Settlement_Amount' => [
+					'nullable',
+					"string"
+				],
 			]);
 
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
 			$Settleit->step = '1_5';
 			$Settleit->settlement_amount = $request->Settleit_Amount;
+			if($request->has('Settleit_Show_Settlement_Amount')){
+				$Settleit->settleit_show_settlement_amount = (bool)$request->Settleit_Show_Settlement_Amount;
+			}
+
 
 			$Settleit_Parties_Offer_Data_Model = new Settleit_Parties_Offer_Data_Model();
 			$Settleit_Parties_Offer_Data_Model->settleit_parties_id = $request->Settleit_Parties_ID;
 			$Settleit_Parties_Offer_Data_Model->currency = "USD";
 			$Settleit_Parties_Offer_Data_Model->total_amount = $request->Settleit_Total_Amount;
 			$Settleit_Parties_Offer_Data_Model->settleit_amount = $request->Settleit_Amount;
+			if($request->has('Settleit_Show_Settlement_Amount')){
+				$Settleit_Parties_Offer_Data_Model->settleit_show_settlement_amount = (bool)$request->Settleit_Show_Settlement_Amount;
+			}
 			$Settleit_Parties_Offer_Data_Model->save();
 
 			$Settleit->save();
