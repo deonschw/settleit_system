@@ -13,6 +13,7 @@ use App\Models\Settleit\Settleit_Parties_Offer_Data_Model;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use function PHPUnit\Framework\isNull;
 
 class Settleit_Controller extends Controller {
@@ -36,14 +37,23 @@ class Settleit_Controller extends Controller {
 			$request->validate([
 				'Session_ID' => [
 					'required',
-					'exists:settleit,id'
+					'string'
 				],
 			]);
 
-			$Settleit = Settleit_Model::findorfail($request->Session_ID);
+			$Settleit = Settleit_Model::where('id', $request->Session_ID)->get()->first();
+			if ($Settleit == null) {
+				$Settleit = new Settleit_Model();
+				$Settleit->status = 'Session_Started';
+				$Settleit->step = '1_1';
+				$Settleit->short_id = $this->Settleit_Short_ID_Generator(6);
+				$Settleit->save();
 
-
-			if ($Settleit->status != 'Complete') {
+				$Return_Array = array(
+					'Session_ID' => $Settleit->id,
+					'Step'       => $Settleit->step,
+				);
+			} else if ($Settleit->status != 'Complete') {
 				$Return_Array = array(
 					'Session_ID'      => $Settleit->id,
 					'Step'            => $Settleit->step,
@@ -56,6 +66,7 @@ class Settleit_Controller extends Controller {
 				$Settleit = new Settleit_Model();
 				$Settleit->status = 'Session_Started';
 				$Settleit->step = '1_1';
+				$Settleit->short_id = $this->Settleit_Short_ID_Generator(6);
 				$Settleit->save();
 
 				$Return_Array = array(
@@ -212,12 +223,21 @@ class Settleit_Controller extends Controller {
 					'password'              => $request->Password,
 					'password_confirmation' => $request->Password,
 				);
-				$Register_Auth = new RegisterController();
-				$Register_Auth->register(new Request($Register_Data));
 
 				$User = User::where('email', $request->Email_Address)->get()->first();
 
-				$User_ID = $User->id;
+				if (!$User) {
+					$Register_Auth = new RegisterController();
+					$Register_Auth->register(new Request($Register_Data));
+
+					$User = User::where('email', $request->Email_Address)->get()->first();
+
+					$User_ID = $User->id;
+				} else {
+					$User->password = Hash::make($request->Password);
+					$User_ID = $User->id;
+					$User->save();
+				}
 			} else {
 				$User_ID = $request->get('User_ID');
 			}
@@ -317,23 +337,23 @@ class Settleit_Controller extends Controller {
 		try {
 
 			$request->validate([
-				'Session_ID'                 => [
+				'Session_ID'                      => [
 					'required',
 					'exists:settleit,id'
 				],
-				'Settleit_Parties_ID'        => [
+				'Settleit_Parties_ID'             => [
 					'required',
 					'exists:settleit_parties,id'
 				],
-				'Settleit_Total_Amount'      => [
+				'Settleit_Total_Amount'           => [
 					'required',
 					"string"
 				],
-				'Settleit_Amount'            => [
+				'Settleit_Amount'                 => [
 					'required',
 					"string"
 				],
-				'Settleit_Validation_Period' => [
+				'Settleit_Validation_Period'      => [
 					'required',
 					"string"
 				],
@@ -346,7 +366,7 @@ class Settleit_Controller extends Controller {
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
 			$Settleit->step = '1_5';
 			$Settleit->settlement_amount = $request->Settleit_Amount;
-			if($request->has('Settleit_Show_Settlement_Amount')){
+			if ($request->has('Settleit_Show_Settlement_Amount')) {
 				$Settleit->settleit_show_settlement_amount = (bool)$request->Settleit_Show_Settlement_Amount;
 			}
 
@@ -356,7 +376,7 @@ class Settleit_Controller extends Controller {
 			$Settleit_Parties_Offer_Data_Model->currency = "USD";
 			$Settleit_Parties_Offer_Data_Model->total_amount = $request->Settleit_Total_Amount;
 			$Settleit_Parties_Offer_Data_Model->settleit_amount = $request->Settleit_Amount;
-			if($request->has('Settleit_Show_Settlement_Amount')){
+			if ($request->has('Settleit_Show_Settlement_Amount')) {
 				$Settleit_Parties_Offer_Data_Model->settleit_show_settlement_amount = (bool)$request->Settleit_Show_Settlement_Amount;
 			}
 			$Settleit_Parties_Offer_Data_Model->save();
