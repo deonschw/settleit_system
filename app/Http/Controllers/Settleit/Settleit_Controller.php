@@ -14,6 +14,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use function PHPUnit\Framework\isNull;
 
 class Settleit_Controller extends Controller {
@@ -27,8 +28,9 @@ class Settleit_Controller extends Controller {
 				$Settleit->save();
 
 				$Return_Array = array(
-					'Session_ID' => $Settleit->id,
-					'Step'       => $Settleit->step,
+					'Session_ID'        => $Settleit->id,
+					'Step'              => $Settleit->step,
+					'Settleit_Short_ID' => $Settleit->short_id,
 				);
 
 				return Response_Successful_Helper('Session Created', 'Data', $Return_Array, 200);
@@ -42,6 +44,7 @@ class Settleit_Controller extends Controller {
 			]);
 
 			$Settleit = Settleit_Model::where('id', $request->Session_ID)->get()->first();
+
 			if ($Settleit == null) {
 				$Settleit = new Settleit_Model();
 				$Settleit->status = 'Session_Started';
@@ -50,16 +53,29 @@ class Settleit_Controller extends Controller {
 				$Settleit->save();
 
 				$Return_Array = array(
-					'Session_ID' => $Settleit->id,
-					'Step'       => $Settleit->step,
+					'Session_ID'        => $Settleit->id,
+					'Step'              => $Settleit->step,
+					'Settleit_Short_ID' => $Settleit->short_id,
 				);
 			} else if ($Settleit->status != 'Complete') {
+
+				if ($Settleit->Settleit_Main_Party) {
+					$Settleit->Settleit_Main_Party->setAttribute('Settlement_Details', $Settleit->Settleit_Main_Party->Settleit_Parties_Settlement_Value->first());
+					$Settleit->Settleit_Main_Party->setAttribute('Lawyer_Details', $Settleit->Settleit_Main_Party->Settleit_Parties_Lawyer_Details->first());
+				}
+
+				if ($Settleit->Settleit_Recipient_Party) {
+					$Settleit->Settleit_Recipient_Party->setAttribute('Settlement_Details', $Settleit->Settleit_Recipient_Party->Settleit_Parties_Settlement_Value->first());
+					$Settleit->Settleit_Recipient_Party->setAttribute('Lawyer_Details', $Settleit->Settleit_Recipient_Party->Settleit_Parties_Lawyer_Details->first());
+				}
+
 				$Return_Array = array(
-					'Session_ID'      => $Settleit->id,
-					'Step'            => $Settleit->step,
-					'Settleit_Data'   => $Settleit,
-					'Main_Party'      => $Settleit->Settleit_Main_Party,
-					'Recipient_Party' => $Settleit->Settleit_Recipient_Party,
+					'Session_ID'        => $Settleit->id,
+					'Step'              => $Settleit->step,
+					'Settleit_Short_ID' => $Settleit->short_id,
+					'Settleit_Data'     => $Settleit,
+					'Main_Party'        => $Settleit->Settleit_Main_Party,
+					'Recipient_Party'   => $Settleit->Settleit_Recipient_Party,
 				);
 
 			} else {
@@ -70,8 +86,9 @@ class Settleit_Controller extends Controller {
 				$Settleit->save();
 
 				$Return_Array = array(
-					'Session_ID' => $Settleit->id,
-					'Step'       => $Settleit->step,
+					'Session_ID'        => $Settleit->id,
+					'Step'              => $Settleit->step,
+					'Settleit_Short_ID' => $Settleit->short_id,
 				);
 			}
 
@@ -143,7 +160,7 @@ class Settleit_Controller extends Controller {
 			$Settleit->creator_id = $Settleit_Parties->id;
 			$Settleit->creator_role = $request->Role;
 			if ($request->Settleit_Total_Amount) {
-				$Settleit->settlement_total_amount = $request->Settleit_Total_Amount;
+				$Settleit->settlement_total_amount = str_replace(",", "", str_replace(".00", "", $request->Settleit_Total_Amount));
 			}
 			$Settleit->save();
 
@@ -151,7 +168,7 @@ class Settleit_Controller extends Controller {
 				$Settleit_Parties_Offer_Data_Model = new Settleit_Parties_Offer_Data_Model();
 				$Settleit_Parties_Offer_Data_Model->settleit_parties_id = $Settleit_Parties->id;
 				$Settleit_Parties_Offer_Data_Model->currency = "USD";
-				$Settleit_Parties_Offer_Data_Model->total_amount = $request->Settleit_Total_Amount;
+				$Settleit_Parties_Offer_Data_Model->total_amount = str_replace(",", "", str_replace(".00", "", $request->Settleit_Total_Amount));
 				//				$Settleit_Parties_Offer_Data_Model->settleit_amount = $request->Settleit_Amount;
 				$Settleit_Parties_Offer_Data_Model->save();
 			}
@@ -194,7 +211,7 @@ class Settleit_Controller extends Controller {
 					"string"
 				],
 				'Password'             => [
-					'required',
+					'nullable',
 					"string"
 				],
 				'Mobile_Number'        => [
@@ -251,7 +268,12 @@ class Settleit_Controller extends Controller {
 			$Settleit_Parties->address = $request->Address;
 			$Settleit_Parties->mobile_number = $request->Mobile_Number;
 			$Settleit_Parties->email_address = $request->Email_Address;
-			$Settleit_Parties->is_legal_representative = (bool)$request->Legal_Representation;
+			if ($request->has('Legal_Representation') && $request->Legal_Representation == 'true') {
+				$Settleit_Parties->is_legal_representative = true;
+			} else {
+				$Settleit_Parties->is_legal_representative = false;
+			}
+
 			$Settleit_Parties->device = $request->Device;
 			$Settleit_Parties->save();
 
@@ -365,19 +387,24 @@ class Settleit_Controller extends Controller {
 
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
 			$Settleit->step = '1_5';
-			$Settleit->settlement_amount = $request->Settleit_Amount;
+			$Settleit->settlement_amount = str_replace(",", "", str_replace(".00", "", $request->Settleit_Amount));
+
 			if ($request->has('Settleit_Show_Settlement_Amount')) {
-				$Settleit->settleit_show_settlement_amount = (bool)$request->Settleit_Show_Settlement_Amount;
+				if ($request->Settleit_Show_Settlement_Amount == 'true') {
+					$Settleit->settleit_show_settlement_amount = true;
+				} else {
+					$Settleit->settleit_show_settlement_amount = false;
+				}
 			}
 
 
 			$Settleit_Parties_Offer_Data_Model = new Settleit_Parties_Offer_Data_Model();
 			$Settleit_Parties_Offer_Data_Model->settleit_parties_id = $request->Settleit_Parties_ID;
 			$Settleit_Parties_Offer_Data_Model->currency = "USD";
-			$Settleit_Parties_Offer_Data_Model->total_amount = $request->Settleit_Total_Amount;
-			$Settleit_Parties_Offer_Data_Model->settleit_amount = $request->Settleit_Amount;
-			if ($request->has('Settleit_Show_Settlement_Amount')) {
-				$Settleit_Parties_Offer_Data_Model->settleit_show_settlement_amount = (bool)$request->Settleit_Show_Settlement_Amount;
+			$Settleit_Parties_Offer_Data_Model->total_amount = str_replace(",", "", str_replace(".00", "", $request->Settleit_Total_Amount));
+			$Settleit_Parties_Offer_Data_Model->settleit_amount = str_replace(",", "", str_replace(".00", "", $request->Settleit_Amount));
+			if ($request->has('Settleit_Show_Settlement_Amount') && $request->Settleit_Show_Settlement_Amount == 'true') {
+				$Settleit_Parties_Offer_Data_Model->settleit_show_settlement_amount = true;
 			}
 			$Settleit_Parties_Offer_Data_Model->save();
 
@@ -556,7 +583,7 @@ class Settleit_Controller extends Controller {
 
 			if ((bool)$request->Confirm_And_Send === true) {
 				$Settleit = Settleit_Model::findorfail($request->Session_ID);
-				$Settleit->step = '1_7';
+				$Settleit->step = '1_8';
 				$Settleit->status = 'Role 1 Completed - Sending to other party';
 				$Settleit->save();
 
@@ -620,41 +647,134 @@ class Settleit_Controller extends Controller {
 		}
 	}
 
+	public function Settleit_Step_2_1_Short_ID_Store_Function(Request $request) {
+		try {
+
+			$request->validate([
+				'Settleit_Short_ID' => [
+					'required',
+					'exists:settleit,short_id'
+				]
+			]);
+
+			$Settleit = Settleit_Model::where('short_id', $request->Settleit_Short_ID)->get()->first();
+			$Settleit->step = '2_1';
+			$Settleit->status = 'Role 2 Opened - Recipient has opened the Settleit';
+			$Settleit->save();
+
+			if ($Settleit->Settleit_Main_Party) {
+				$Settleit->Settleit_Main_Party->setAttribute('Settlement_Details', $Settleit->Settleit_Main_Party->Settleit_Parties_Settlement_Value->first());
+				$Settleit->Settleit_Main_Party->setAttribute('Lawyer_Details', $Settleit->Settleit_Main_Party->Settleit_Parties_Lawyer_Details->first());
+			}
+
+			if ($Settleit->Settleit_Recipient_Party) {
+				$Settleit->Settleit_Recipient_Party->setAttribute('Settlement_Details', $Settleit->Settleit_Recipient_Party->Settleit_Parties_Settlement_Value->first());
+				$Settleit->Settleit_Recipient_Party->setAttribute('Lawyer_Details', $Settleit->Settleit_Recipient_Party->Settleit_Parties_Lawyer_Details->first());
+			}
+
+			$Settleit_Main_Parties_ID = $Settleit->creator_id;
+			if ($Settleit->creator_role == 'Plaintiff') {
+				$Settleit_Recipient_Parties_ID = $Settleit->defendant;
+			} else {
+				$Settleit_Recipient_Parties_ID = $Settleit->plaintiff;
+			}
+
+			$Settleit_Main_Parties_Data = Settleit_Parties_Model::findorfail($Settleit_Main_Parties_ID);
+			$Settleit_Recipient_Parties_Data = Settleit_Parties_Model::findorfail($Settleit_Recipient_Parties_ID);
+
+
+			$Return_Array = array(
+				'Session_ID'                      => $Settleit->id,
+				'Settleit_Main_Parties_ID'        => $Settleit_Main_Parties_ID,
+				'Settleit_Recipient_Parties_ID'   => $Settleit_Recipient_Parties_ID,
+				'Settleit_Data'                   => $Settleit,
+				'Settleit_Main_Parties_Data'      => $Settleit_Main_Parties_Data,
+				'Settleit_Recipient_Parties_Data' => $Settleit_Recipient_Parties_Data,
+				'Step'                            => $Settleit->step,
+			);
+
+			return Response_Successful_Helper('Step 2_1 Complete', 'Data', $Return_Array, 200);
+		} catch (Exception $exception) {
+			return Response_Error_Helper($exception->getMessage(), 501);
+		}
+	}
+
 	public function Settleit_Step_2_2_Store_Function(Request $request) {
 		try {
+			Log::debug($request->all());
 			$request->validate([
-				'Session_ID'                    => [
+				'Session_ID'                     => [
 					'required',
 					'exists:settleit,id'
 				],
-				'Settleit_Recipient_Parties_ID' => [
+				'Settleit_Recipient_Parties_ID'  => [
 					'required',
 					'exists:settleit_parties,id'
 				],
-				'Last_Step_Completed'           => [
+				'Last_Step_Completed'            => [
 					'required',
 					"string"
 				],
-				'Recipient_Full_Name'           => [
+				'Recipient_Full_Name'            => [
 					'required',
 					"string"
 				],
-				'Recipient_Address'             => [
-					'required',
+				'Recipient_Address'              => [
+					'nullable',
 					"string"
 				],
-				'Recipient_Mobile_Number'       => [
+				'Recipient_Mobile_Number'        => [
 					'required',
 				],
-				'Recipient_Email_Address'       => [
+				'Recipient_Email_Address'        => [
 					'required',
 					'email'
 				],
-				'Recipient_Device'              => [
+				'Recipient_Device'               => [
+					'required',
+					'string'
+				],
+				'Recipient_User_ID'              => [
+					'nullable',
+					"string"
+				],
+				'Recipient_Password'             => [
+					'nullable',
+					"string"
+				],
+				'Recipient_Legal_Representation' => [
 					'required',
 					'string'
 				],
 			]);
+
+
+			if ($request->get('Recipient_User_ID') == null || $request->get('Recipient_User_ID') == 'null' || !$request->has('Recipient_User_ID')) {
+				$Register_Data = array(
+					'name'                  => $request->Recipient_Full_Name,
+					'email'                 => $request->Recipient_Email_Address,
+					'mobile_number'         => $request->Recipient_Mobile_Number,
+					'password'              => $request->Recipient_Password,
+					'password_confirmation' => $request->Recipient_Password,
+				);
+
+				$User = User::where('email', $request->Recipient_Email_Address)->get()->first();
+
+				if (!$User) {
+					$Register_Auth = new RegisterController();
+					$Register_Auth->register(new Request($Register_Data));
+
+					$User = User::where('email', $request->Recipient_Email_Address)->get()->first();
+
+					$Recipient_User_ID = $User->id;
+				} else {
+					$User->password = Hash::make($request->Recipient_Password);
+					$Recipient_User_ID = $User->id;
+					$User->save();
+				}
+			} else {
+				$Recipient_User_ID = $request->get('Recipient_User_ID');
+			}
 
 
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
@@ -663,16 +783,23 @@ class Settleit_Controller extends Controller {
 
 			$Settleit_Recipient_Parties = Settleit_Parties_Model::where('id', $request->Settleit_Recipient_Parties_ID)->where('settleit_id', $Settleit->id)->get()->first();
 			$Settleit_Recipient_Parties->full_name = $request->Recipient_Full_Name;
+			$Settleit_Recipient_Parties->user_id = $Recipient_User_ID;
 			$Settleit_Recipient_Parties->address = $request->Recipient_Address;
 			$Settleit_Recipient_Parties->mobile_number = $request->Recipient_Mobile_Number;
 			$Settleit_Recipient_Parties->email_address = $request->Recipient_Email_Address;
 			$Settleit_Recipient_Parties->Device = $request->Recipient_Device;
+			if ($request->has('Recipient_Legal_Representation') && $request->Recipient_Legal_Representation == 'true') {
+				$Settleit_Recipient_Parties->is_legal_representative = true;
+			} else {
+				$Settleit_Recipient_Parties->is_legal_representative = false;
+			}
 			$Settleit_Recipient_Parties->save();
 
 			$Return_Array = array(
 				'Session_ID'                    => $Settleit->id,
 				'Settleit_Recipient_Parties_ID' => $Settleit_Recipient_Parties->id,
 				'Step'                          => $Settleit->step,
+				'User_ID'                       => $Recipient_User_ID,
 			);
 
 			return Response_Successful_Helper('Step 2_2 Complete', 'Data', $Return_Array, 200);
@@ -768,7 +895,7 @@ class Settleit_Controller extends Controller {
 			$Settleit_Recipient_Parties_Offer_Data_Model = new Settleit_Parties_Offer_Data_Model();
 			$Settleit_Recipient_Parties_Offer_Data_Model->settleit_parties_id = $request->Settleit_Recipient_Parties_ID;
 			$Settleit_Recipient_Parties_Offer_Data_Model->currency = "USD";
-			$Settleit_Recipient_Parties_Offer_Data_Model->settleit_amount = $request->Settleit_Recipient_Amount;
+			$Settleit_Recipient_Parties_Offer_Data_Model->settleit_amount = str_replace(",", "", str_replace(".00", "", $request->Settleit_Recipient_Amount));
 			$Settleit_Recipient_Parties_Offer_Data_Model->save();
 
 			$Return_Array = array(
@@ -786,31 +913,31 @@ class Settleit_Controller extends Controller {
 	public function Settleit_Step_2_5_Store_Function(Request $request) {
 		try {
 			$request->validate([
-				'Session_ID'           => [
+				'Session_ID'                    => [
 					'required',
 					'exists:settleit,id'
 				],
-				'Settleit_Parties_ID'  => [
+				'Settleit_Recipient_Parties_ID' => [
 					'required',
 					'exists:settleit_parties,id'
 				],
-				'Last_Step_Completed'  => [
+				'Last_Step_Completed'           => [
 					'required',
 					"string"
 				],
-				'Lawyer_Name'          => [
+				'Lawyer_Name'                   => [
 					'required',
 					"string"
 				],
-				'Lawyer_Company_Name'  => [
+				'Lawyer_Company_Name'           => [
 					'nullable',
 					"string"
 				],
-				'Lawyer_Mobile_Number' => [
+				'Lawyer_Mobile_Number'          => [
 					'nullable',
 					"string"
 				],
-				'Lawyer_Email_Address' => [
+				'Lawyer_Email_Address'          => [
 					'required',
 					'email'
 				]
@@ -818,15 +945,15 @@ class Settleit_Controller extends Controller {
 
 
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
-			$Settleit->step = '1_6';
+			$Settleit->step = '2_6';
 
-			$Settleit_Parties = Settleit_Parties_Model::findorfail($request->Settleit_Parties_ID);
+			$Settleit_Parties = Settleit_Parties_Model::findorfail($request->Settleit_Recipient_Parties_ID);
 
-			$Lawyer_Details = Legal_Data_Model::where('settleit_parties_id', $request->Settleit_Parties_ID)->where('settleit_id', $request->Session_ID)->get()->first();
+			$Lawyer_Details = Legal_Data_Model::where('settleit_parties_id', $request->Settleit_Recipient_Parties_ID)->where('settleit_id', $request->Session_ID)->get()->first();
 			if ($Lawyer_Details == null) {
 				$Lawyer_Details = new Legal_Data_Model();
 				$Lawyer_Details->settleit_id = $request->Session_ID;
-				$Lawyer_Details->settleit_parties_id = $request->Settleit_Parties_ID;
+				$Lawyer_Details->settleit_parties_id = $request->Settleit_Recipient_Parties_ID;
 			}
 
 			$Lawyer_Details->full_name = $request->Lawyer_Name;
@@ -841,7 +968,7 @@ class Settleit_Controller extends Controller {
 				'Step'                => $Settleit->step,
 			);
 
-			return Response_Successful_Helper('Sending Settleit', 'Data', $Return_Array, 200);
+			return Response_Successful_Helper('Recipient Lawyer Details Saved', 'Data', $Return_Array, 200);
 		} catch (Exception $exception) {
 			return Response_Error_Helper($exception->getMessage(), 501);
 		}
@@ -860,33 +987,26 @@ class Settleit_Controller extends Controller {
 				],
 				'Confirm_And_Send'              => [
 					'required',
-					"bool"
+					"string"
 				],
 			]);
 
 
-			if ($request->Confirm_And_Send === true) {
+			if ((bool)$request->Confirm_And_Send === true) {
 				$Settleit = Settleit_Model::findorfail($request->Session_ID);
 				$Settleit->step = '2_5';
 				$Settleit->status = 'Role 2 Completed - Submitted an Settlement Back';
 				$Settleit->save();
 
 				$Settleit_Match_Function = $this->Settleit_Match_Function($request->Session_ID);
-				dd($Settleit_Match_Function);
+				//				dd($Settleit_Match_Function);
 				//TODO:: If no match - send to screen "no match"
 
 				//TODO:: If match - send notification to both parties - email to both
 
 				//TODO:: If Recipient went bigger then send "save" message
 
-
-				$Return_Array = array(
-					'Session_ID'          => $Settleit->id,
-					'Settleit_Parties_ID' => $request->Settleit_Parties_ID,
-					'Step'                => $Settleit->step,
-				);
-
-				return Response_Successful_Helper('Sending Settleit', 'Data', $Return_Array, 200);
+				return Response_Successful_Helper('Sending Settleit', 'Data', $Settleit_Match_Function, 200);
 
 			}
 
@@ -905,32 +1025,36 @@ class Settleit_Controller extends Controller {
 
 			if ($Settleit->settlement_amount == $Offer_Amount) {
 				return array(
-					'Error'                     => false,
+					//					'Error'                     => false,
 					'Match'                     => true,
 					'Party_1_Settlement_Amount' => $Settleit->settlement_amount,
-					'Party_2_Settlement_Amount' => $Offer_Amount,
-					'Difference'                => '0'
+					'Party_2_Settlement_Amount' => (string)$Offer_Amount,
+					'Difference'                => '0',
+					'Settlement_Amount'         => (string)$Offer_Amount,
 				);
 			}
 
 			if ($Settleit->settlement_amount <= $Offer_Amount) {
-				$Difference = (int)$Offer_Amount - (int)$Settleit->settlement_amount;
+				$Difference = ((int)$Offer_Amount - (int)$Settleit->settlement_amount) /2;
+				$Settlement_Amount =  $Offer_Amount - $Difference;
 				return array(
-					'Error'                     => false,
+					//					'Error'                     => false,
 					'Match'                     => true,
 					'Party_1_Settlement_Amount' => $Settleit->settlement_amount,
-					'Party_2_Settlement_Amount' => $Offer_Amount,
-					'Difference'                => $Difference
+					'Party_2_Settlement_Amount' => (string)$Offer_Amount,
+					'Difference'                => (string)$Difference,
+					'Settlement_Amount'         => (string)$Settlement_Amount,
 				);
 			}
 
 			if ($Settleit->settlement_amount >= $Offer_Amount) {
 				return array(
-					'Error'                     => false,
+					//					'Error'                     => false,
 					'Match'                     => false,
 					'Party_1_Settlement_Amount' => $Settleit->settlement_amount,
-					'Party_2_Settlement_Amount' => $Offer_Amount,
-					'Difference'                => '0'
+					'Party_2_Settlement_Amount' => (string)$Offer_Amount,
+					'Difference'                => '0',
+					'Settlement_Amount'         => '0',
 				);
 			}
 

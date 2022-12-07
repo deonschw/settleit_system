@@ -56,6 +56,11 @@ Route::prefix('v1')->group(function () {
 		'Settleit_Step_2_1_Store_Function'
 	]);
 
+	Route::post('step_2_1_short_id', [
+		Settleit_Controller::class,
+		'Settleit_Step_2_1_Short_ID_Store_Function'
+	]);
+
 	Route::post('step_2_2', [
 		Settleit_Controller::class,
 		'Settleit_Step_2_2_Store_Function'
