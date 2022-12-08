@@ -376,7 +376,7 @@ class Settleit_Controller extends Controller {
 					"string"
 				],
 				'Settleit_Validation_Period'      => [
-					'required',
+					'nullable',
 					"string"
 				],
 				'Settleit_Show_Settlement_Amount' => [
@@ -583,6 +583,14 @@ class Settleit_Controller extends Controller {
 
 			if ((bool)$request->Confirm_And_Send === true) {
 				$Settleit = Settleit_Model::findorfail($request->Session_ID);
+
+				//TODO:: Apple Test function
+				if(env('APPLETESTSESSIONID','7e3d32a8-211d-41e0-b9e8-27c025b3e51a') == $request->Session_ID ){
+					$Settleit->step = '1_3';
+				}else{
+					$Settleit->step = '1_8';
+				}
+
 				$Settleit->step = '1_8';
 				$Settleit->status = 'Role 1 Completed - Sending to other party';
 				$Settleit->save();
