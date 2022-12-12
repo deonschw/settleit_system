@@ -587,12 +587,11 @@ class Settleit_Controller extends Controller {
 				//TODO:: Apple Test function
 				if(env('APPLETESTSESSIONID','7e3d32a8-211d-41e0-b9e8-27c025b3e51a') == $request->Session_ID ){
 					$Settleit->step = '1_3';
+					$Settleit->status = "Session_Started";
 				}else{
 					$Settleit->step = '1_8';
+					$Settleit->status = 'Role 1 Completed - Sending to other party';
 				}
-
-				$Settleit->step = '1_8';
-				$Settleit->status = 'Role 1 Completed - Sending to other party';
 				$Settleit->save();
 
 				//TODO:: Email Integration to send here.
