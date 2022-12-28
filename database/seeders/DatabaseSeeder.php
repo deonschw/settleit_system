@@ -20,5 +20,15 @@ class DatabaseSeeder extends Seeder
         //     'name' => 'Test User',
         //     'email' => 'test@example.com',
         // ]);
+
+	    \App\Models\App_Env\App_Env_Model::create([
+             'key' => 'App_Version_IOS',
+             'data' => '0.0.11',
+         ]);
+
+	    \App\Models\App_Env\App_Env_Model::create([
+		    'key' => 'App_Version_Android',
+		    'data' => '0.0.11',
+	    ]);
     }
 }

@@ -10,6 +10,22 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 //TODO:: Add security
 Route::prefix('v1')->group(function () {
+	Route::post('app_init', [
+		Settleit_Controller::class,
+		'App_Init_Function'
+	]);
+
+	//Login HERE
+	Route::post('app_login', [
+		Settleit_Controller::class,
+		'Settleit_App_Login'
+	]);
+
+	// Here is Dashboard
+	Route::post('app_dashboard_data', [
+		Settleit_Controller::class,
+		'Settleit_Dashboard_Data'
+	])->middleware('auth:sanctum');
 
 	Route::post('check_session', [
 		Settleit_Controller::class,
@@ -89,10 +105,5 @@ Route::prefix('v1')->group(function () {
 	Route::post('check_if_user_registered', [
 		Settleit_Controller::class,
 		'Check_If_User_Registered'
-	]);
-
-	Route::post('app_dashboard_data', [
-		Settleit_Controller::class,
-		'Settleit_Dashboard_Data'
 	]);
 });

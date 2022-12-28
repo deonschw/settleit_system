@@ -5,16 +5,19 @@ namespace App\Http\Controllers\Settleit;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Controller;
 use App\Http\Helpers;
+use App\Models\App_Env\App_Env_Model;
 use App\Models\ID_Verified\ID_Verified_Model;
 use App\Models\Legal\Legal_Data_Model;
 use App\Models\Settleit\Settleit_Model;
 use App\Models\Settleit\Settleit_Parties_Model;
 use App\Models\Settleit\Settleit_Parties_Offer_Data_Model;
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use function PHPUnit\Framework\isNull;
 
 class Settleit_Controller extends Controller {
@@ -584,11 +587,18 @@ class Settleit_Controller extends Controller {
 			if ((bool)$request->Confirm_And_Send === true) {
 				$Settleit = Settleit_Model::findorfail($request->Session_ID);
 
+				//Set Exp for 24 Hours.
+				//Set Exp for 24 Hours.
+				//Set Exp for 24 Hours.
+				$Settleit_Party = Settleit_Parties_Model::where('id', $request->Settleit_Parties_ID)->get()->first();
+				$Settleit_Party->validated_period = Carbon::now()->addDay()->toDateTimeString();
+				$Settleit_Party->save();
+
 				//TODO:: Apple Test function
-				if(env('APPLETESTSESSIONID','7e3d32a8-211d-41e0-b9e8-27c025b3e51a') == $request->Session_ID ){
+				if (env('APPLETESTSESSIONID', '7e3d32a8-211d-41e0-b9e8-27c025b3e51a') == $request->Session_ID) {
 					$Settleit->step = '1_3';
 					$Settleit->status = "Session_Started";
-				}else{
+				} else {
 					$Settleit->step = '1_8';
 					$Settleit->status = 'Role 1 Completed - Sending to other party';
 				}
@@ -622,6 +632,7 @@ class Settleit_Controller extends Controller {
 				]
 			]);
 
+
 			$Settleit = Settleit_Model::findorfail($request->Session_ID);
 			$Settleit->step = '2_1';
 			$Settleit->status = 'Role 2 Opened - Recipient has opened the Settleit';
@@ -637,6 +648,19 @@ class Settleit_Controller extends Controller {
 			$Settleit_Main_Parties_Data = Settleit_Parties_Model::findorfail($Settleit_Main_Parties_ID);
 			$Settleit_Recipient_Parties_Data = Settleit_Parties_Model::findorfail($Settleit_Recipient_Parties_ID);
 
+			//TODO:: Check if this has expired.
+			//TODO:: Check if this has expired.
+			//TODO:: Check if this has expired.
+			//TODO:: Check if this has expired.
+			$Now = Carbon::now();
+
+			if ($Now->gte($Settleit_Main_Parties_Data->validated_period) === false) {
+				//Settleit NOT expired
+				$Temp_Is_Expired = false;
+			} else {
+				//Settleit expired
+				$Temp_Is_Expired = true;
+			}
 
 			$Return_Array = array(
 				'Session_ID'                      => $Settleit->id,
@@ -646,6 +670,7 @@ class Settleit_Controller extends Controller {
 				'Settleit_Main_Parties_Data'      => $Settleit_Main_Parties_Data,
 				'Settleit_Recipient_Parties_Data' => $Settleit_Recipient_Parties_Data,
 				'Step'                            => $Settleit->step,
+				'Has_Expired'                     => $Temp_Is_Expired,
 			);
 
 			return Response_Successful_Helper('Step 2_1 Complete', 'Data', $Return_Array, 200);
@@ -1042,8 +1067,8 @@ class Settleit_Controller extends Controller {
 			}
 
 			if ($Settleit->settlement_amount <= $Offer_Amount) {
-				$Difference = ((int)$Offer_Amount - (int)$Settleit->settlement_amount) /2;
-				$Settlement_Amount =  $Offer_Amount - $Difference;
+				$Difference = ((int)$Offer_Amount - (int)$Settleit->settlement_amount) / 2;
+				$Settlement_Amount = $Offer_Amount - $Difference;
 				return array(
 					//					'Error'                     => false,
 					'Match'                     => true,
@@ -1122,30 +1147,170 @@ class Settleit_Controller extends Controller {
 	}
 
 	//TODO:: Complete this.
+
+	public function Settleit_App_Login(Request $request) {
+		$validator = Validator::make($request->all(), [
+			'Email_Address' => [
+				'required',
+				'exists:users,email',
+			],
+			'Password'      => ['required'],
+		]);
+
+
+		if ($validator->fails()) {
+			if ($validator->getMessageBag()->first() == 'The selected email address is invalid.') {
+				return Response_Error_Helper('Your username or password is incorrect. Please try again or reset your password.', 403);
+			}
+
+			return Response_Error_Helper($validator->getMessageBag()->first(), 200);
+		}
+
+		try {
+			$User_Data = User::where('email', $request->Email_Address)->with('My_Settleits')->get()->first();
+
+			if (Hash::check($request->Password, $User_Data->password)) {
+				$Settleit_Data = $this->Get_All_Settleits($User_Data->id);
+				$token = $User_Data->createToken('app_login_access');
+
+				$Return_Array = array(
+					'User_Registered' => true,
+					'access_token'    => $token->plainTextToken,
+					'User_ID'         => $User_Data->id,
+					'Settleit_Data'   => $Settleit_Data,
+				);
+
+				return Response_Successful_Helper('User Registered Check', 'Data', $Return_Array, 200);
+			} else {
+				return Response_Error_Helper('Your username or password is incorrect. Please try again or reset your password.', 403);
+			}
+
+		} catch (Exception $exception) {
+			return Response_Error_Helper($exception->getMessage(), 501);
+		}
+
+	}
+
 	public function Settleit_Dashboard_Data(Request $request) {
 		try {
 			$request->validate([
-				'Session_ID'    => [
+				'User_ID'       => [
 					'required',
-					'exists:settleit,id'
+					'exists:users,id'
 				],
 				'Email_Address' => [
-					'required',
+					'nullable',
 					'email'
 				],
 			]);
 
-			$User = User::where('email', $request->Email_Address)->get()->first();
+			$User_Data = User::where('id', $request->User_ID)->with('My_Settleits')->get()->first();
+			$Settleit_Data = $this->Get_All_Settleits($User_Data->id);
+			$token = $User_Data->createToken('app_login_access');
+
 			$Return_Array = array(
-				'Session_ID'      => $request->Session_ID,
 				'User_Registered' => true,
-				'User_ID'         => $User->id,
+				'access_token'    => $token->plainTextToken,
+				'User_ID'         => $User_Data->id,
+				'Settleit_Data'   => $Settleit_Data,
 			);
 
 			return Response_Successful_Helper('User Registered Check', 'Data', $Return_Array, 200);
 
 		} catch (Exception $exception) {
 			return Response_Error_Helper($exception->getMessage(), 501);
+		}
+	}
+
+	public function App_Init_Function(Request $request) {
+		try {
+			$request->validate([
+				'Session_ID'  => [
+					'nullable',
+					'exists:settleit,id'
+				],
+				'Device'      => [
+					'required',
+					'string'
+				],
+				'App_Version' => [
+					'required',
+					'string'
+				],
+			]);
+
+			$App_Version_OK = true;
+
+			if ($request->Device == 'Android') {
+				$App_Version = App_Env_Model::where('key', 'App_Version_Android')->where('active', '1')->get()->first();
+			} else {
+				$App_Version = App_Env_Model::where('key', 'App_Version_IOS')->where('active', '1')->get()->first();
+			}
+
+			// Checks App Version
+			if ($App_Version->data != $request->App_Version) {
+				$App_Version_OK = false;
+			}
+
+			$Return_Array = array(
+				'Connection'     => true,
+				'App_Version_OK' => $App_Version_OK,
+			);
+
+			return Response_Successful_Helper('App Init', 'Data', $Return_Array, 200);
+
+		} catch (Exception $exception) {
+			return Response_Error_Helper($exception->getMessage(), 501);
+		}
+	}
+
+	private function Get_All_Settleits($User_ID) {
+		try {
+			$My_Settleit_Parties = Settleit_Parties_Model::where('user_id', $User_ID)->whereNotNull('user_id')->get();
+
+			$Count = 0;
+			$My_Settleit = collect();
+			$Recipient_Settleit = collect();
+			foreach ($My_Settleit_Parties as $My_Settleit_Partie) {
+				$Now = Carbon::now();
+
+				if (!$Now->gte($My_Settleit_Partie->validated_period)) {
+					//Settleit NOT expired
+					$Temp_Is_Expired = false;
+				} else {
+					//Settleit expired
+					$Temp_Is_Expired = true;
+				}
+
+				$Settleit_Temp = Settleit_Model::where('id', $My_Settleit_Partie->settleit_id)->whereNotNull('creator_id')->get()->first();
+
+				if ($Settleit_Temp['creator_id'] == $My_Settleit_Partie->id) {
+					$My_Settleit[$Count] = array(
+						"Settleit"          => $Settleit_Temp,
+						"Recipient_Details" => $Settleit_Temp->Settleit_Recipient_Party,
+						"Is_Expired"        => $Temp_Is_Expired
+					);
+				} else {
+					$Recipient_Settleit[$Count] = array(
+						"Settleit"             => $Settleit_Temp,
+						"Main_Parties_Details" => $Settleit_Temp->Settleit_Main_Party,
+						"Is_Expired"           => $Temp_Is_Expired
+					);
+				}
+				$Count++;
+			}
+
+			return array(
+				'My_Settleit'        => $My_Settleit,
+				'Recipient_Settleit' => $Recipient_Settleit,
+			);
+
+		} catch (Exception $exception) {
+
+			return array(
+				'Error'   => true,
+				'Message' => "There has been an error."
+			);
 		}
 	}
 

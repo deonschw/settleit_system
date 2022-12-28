@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Settleit\Settleit_Model;
 use App\Traits\Uuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -58,4 +59,7 @@ class User extends Authenticatable {
         'email_verified_at' => 'datetime',
     ];
 
+	public function My_Settleits() {
+		return $this->hasMany(Settleit_Model::class, 'id', 'creator_id');
+	}
 }
