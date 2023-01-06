@@ -254,9 +254,11 @@ class Settleit_Controller extends Controller {
 
 					$User_ID = $User->id;
 				} else {
-					$User->password = Hash::make($request->Password);
-					$User_ID = $User->id;
-					$User->save();
+					if ($request->Password != null) {
+						$User->password = Hash::make($request->Password);
+						$User_ID = $User->id;
+						$User->save();
+					}
 				}
 			} else {
 				$User_ID = $request->get('User_ID');
@@ -1167,7 +1169,8 @@ class Settleit_Controller extends Controller {
 		}
 
 		try {
-			$User_Data = User::where('email', $request->Email_Address)->with('My_Settleits')->get()->first();
+//			$User_Data = User::where('email', $request->Email_Address)->with('My_Settleits')->get()->first();
+			$User_Data = User::where('email', $request->Email_Address)->get()->first();
 
 			if (Hash::check($request->Password, $User_Data->password)) {
 				$Settleit_Data = $this->Get_All_Settleits($User_Data->id);
@@ -1177,6 +1180,7 @@ class Settleit_Controller extends Controller {
 					'User_Registered' => true,
 					'access_token'    => $token->plainTextToken,
 					'User_ID'         => $User_Data->id,
+					'User_Data'       => $User_Data,
 					'Settleit_Data'   => $Settleit_Data,
 				);
 
@@ -1204,7 +1208,8 @@ class Settleit_Controller extends Controller {
 				],
 			]);
 
-			$User_Data = User::where('id', $request->User_ID)->with('My_Settleits')->get()->first();
+//			$User_Data = User::where('id', $request->User_ID)->with('My_Settleits')->get()->first();
+			$User_Data = User::where('id', $request->User_ID)->get()->first();
 			$Settleit_Data = $this->Get_All_Settleits($User_Data->id);
 			$token = $User_Data->createToken('app_login_access');
 
@@ -1212,6 +1217,7 @@ class Settleit_Controller extends Controller {
 				'User_Registered' => true,
 				'access_token'    => $token->plainTextToken,
 				'User_ID'         => $User_Data->id,
+				'User_Data'       => $User_Data,
 				'Settleit_Data'   => $Settleit_Data,
 			);
 
@@ -1274,35 +1280,47 @@ class Settleit_Controller extends Controller {
 			foreach ($My_Settleit_Parties as $My_Settleit_Partie) {
 				$Now = Carbon::now();
 
-				if (!$Now->gte($My_Settleit_Partie->validated_period)) {
-					//Settleit NOT expired
-					$Temp_Is_Expired = false;
+				if ($My_Settleit_Partie->validated_period != "no_limit") {
+					if (!$Now->gte($My_Settleit_Partie->validated_period)) {
+						//Settleit NOT expired
+						$Temp_Is_Expired = false;
+					} else {
+						//Settleit expired
+						$Temp_Is_Expired = true;
+					}
 				} else {
-					//Settleit expired
-					$Temp_Is_Expired = true;
+					$Temp_Is_Expired = false;
 				}
 
 				$Settleit_Temp = Settleit_Model::where('id', $My_Settleit_Partie->settleit_id)->whereNotNull('creator_id')->get()->first();
+
+				$Settleit_Human_Step = $this->Step_To_Human($Settleit_Temp->step);
 
 				if ($Settleit_Temp['creator_id'] == $My_Settleit_Partie->id) {
 					$My_Settleit[$Count] = array(
 						"Settleit"          => $Settleit_Temp,
 						"Recipient_Details" => $Settleit_Temp->Settleit_Recipient_Party,
-						"Is_Expired"        => $Temp_Is_Expired
+						"Is_Expired"        => $Temp_Is_Expired,
+						"Human_Step"        => $Settleit_Human_Step['Human_Step'],
+						"Complete_Percent"  => $Settleit_Human_Step['Complete_Percent']
 					);
 				} else {
 					$Recipient_Settleit[$Count] = array(
 						"Settleit"             => $Settleit_Temp,
 						"Main_Parties_Details" => $Settleit_Temp->Settleit_Main_Party,
-						"Is_Expired"           => $Temp_Is_Expired
+						"Is_Expired"           => $Temp_Is_Expired,
+						"Human_Step"           => $Settleit_Human_Step['Human_Step'],
+						"Complete_Percent"     => $Settleit_Human_Step['Complete_Percent']
 					);
 				}
 				$Count++;
 			}
 
 			return array(
-				'My_Settleit'        => $My_Settleit,
-				'Recipient_Settleit' => $Recipient_Settleit,
+				'My_Settleit'              => $My_Settleit,
+				'My_Settleit_Count'        => $My_Settleit->count(),
+				'Recipient_Settleit'       => $Recipient_Settleit,
+				'Recipient_Settleit_Count' => $Recipient_Settleit->count(),
 			);
 
 		} catch (Exception $exception) {
@@ -1312,6 +1330,60 @@ class Settleit_Controller extends Controller {
 				'Message' => "There has been an error."
 			);
 		}
+	}
+
+	private function Step_To_Human($Step) {
+
+		$Human_Step = "Settleit Started";
+		$Complete_Percent = "0.1";
+
+		if ($Step == '1_1' || $Step == '1_2') {
+			$Human_Step = "Awaiting Your Details.";
+			$Complete_Percent = "0.1";
+		}
+
+		if ($Step == '1_3') {
+			$Human_Step = "Awaiting Your ID Verification.";
+			$Complete_Percent = "0.3";
+		}
+
+		if ($Step == '1_4') {
+			$Human_Step = "Awaiting Settleit Details.";
+			$Complete_Percent = "0.4";
+		}
+
+		if ($Step == '1_5') {
+			$Human_Step = "Awaiting Your Lawyers Details.";
+			$Complete_Percent = "0.5";
+		}
+
+		if ($Step == '1_6') {
+			$Human_Step = "Awaiting Recipients Details.";
+			$Complete_Percent = "0.6";
+		}
+
+		if ($Step == '1_7') {
+			$Human_Step = "Awaiting Final Review And Confirmation.";
+			$Complete_Percent = "0.8";
+		}
+
+		if ($Step == '1_8') {
+			$Human_Step = "Sent To Recipient Party.";
+			$Complete_Percent = "1";
+		}
+
+		#----------------------------
+
+		if ($Step == '2_1' || $Step == '2_2' || $Step == '2_3' || $Step == '2_4' || $Step == '2_5' || $Step == '2_6') {
+			$Human_Step = "Awaiting Recipient Party To Complete The Settleit.";
+			$Complete_Percent = "1";
+		}
+
+		return array(
+			'Human_Step'       => $Human_Step,
+			'Complete_Percent' => $Complete_Percent,
+		);
+
 	}
 
 }
